@@ -2,7 +2,7 @@
 #'
 #' @description Function to perform probabilistic phylogenetic PCA using Bayesian Markov-Chain Monte Carlo.
 #' @param phy phylogeny in "phylo" format.
-#' @param dt a matrix with traits in columns and species values in rows. Rownames must match the tip labels of phylogeny.
+#' @param x a matrix with traits in columns and species values in rows. Rownames must match the tip labels of phylogeny.
 #' @param ret_dim number of dimensions (PC axes) to be kept by the model.
 #' @param gamma_shape The shape parameter for the gamma prior.
 #' @param gamma_rate The rate parameter for the gamma prior.
@@ -24,22 +24,22 @@
 #' phy <- ratematrix::anoles$phy[[1]]
 #' dt <- as.matrix( ratematrix::anoles$data[,1:3] )
 #' ## Do a VERY small chain to test:
-#' mcmc3PCA <- mcmcPhyloPPCA(phy = phy, dt = dt, gen = 100)
+#' mcmc3PCA <- MCMCphylProbPCA(phy = phy, x = dt, gen = 100)
 #'
 #'
 #' @export
-mcmcPhyloPPCA <- function(phy, dt, ret_dim = 2, gamma_shape = 1, gamma_rate = 2, gen = 10^6, step_scale = 0.08, burn = 0.2){
+MCMCphylProbPCA <- function(phy, x, ret_dim = 2, gamma_shape = 1, gamma_rate = 2, gen = 10^6, step_scale = 0.08, burn = 0.2){
 
   ## Estimate the MLE of the R matrix:
   C <- ape::vcv.phylo(phy)
   invC <- solve(C)
-  a <- matrix(colSums(invC %*% dt) / sum(invC), ncol(dt), 1)
-  A <- matrix(rep(a, nrow(dt)), nrow(dt), ncol(dt), byrow=T)
-  R <- t(dt-A) %*% invC %*% (dt-A) / (nrow(C)-1)
+  a <- matrix(colSums(invC %*% x) / sum(invC), ncol(x), 1)
+  A <- matrix(rep(a, nrow(x)), nrow(x), ncol(x), byrow=T)
+  R <- t(x-A) %*% invC %*% (x-A) / (nrow(C)-1)
   ## Preparing parameters:
-  d <- ncol(dt)
+  d <- ncol(x)
   q <- ret_dim
-  N <- nrow(dt)
+  N <- nrow(x)
   R_decom <- eigen(R)
   g <- R_decom$values
   
@@ -85,7 +85,7 @@ mcmcPhyloPPCA <- function(phy, dt, ret_dim = 2, gamma_shape = 1, gamma_rate = 2,
   W <- U_q %*% (L_q - (sigma_mean_p^2*I_q))^0.5 %*% I_q
   
   ## Compute the projection:
-  mcmc_proj <- getPhyloProjection(x = dt, invC = invC, R = R, R_decom = R_decom
+  mcmc_proj <- getPhyloProjection(x = x, invC = invC, R = R, R_decom = R_decom
                                   , W = W, a = a, N = N, d = d, q = q
                                   , sigma = sigma_mean_p)
   

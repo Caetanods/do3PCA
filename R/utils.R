@@ -103,3 +103,33 @@ getPhyloProjection <- function(x, invC, R, R_decom, W, a, N, sigma, d, q, square
   result$varnames <- colnames(x)
   return( result )
 }
+
+#' @noRd
+#' @importFrom stats lm coef
+getProjection <- function(x, W, S, sigma, squared = FALSE){
+  # x = data
+  # W = the W matrix.
+  # sigma = can be squared or not
+  # squared = indicate if sigma is squared or not
+  if( !squared ){
+    sigma <- sigma^2
+  }
+  M <- (t(W)%*%W)+(diag(ncol(W))*sigma)
+  SOL <- do3PCA:::aux.bicgstab_fork(M, t(W), verbose=FALSE)
+  projection <- do3PCA:::aux.adjprojection_fork(t(SOL$x))
+  ## Find the eigenvalues given W:
+  e_val <- vector(mode = "numeric", length = ncol(projection))
+  for( i in 1:length(e_val) ){
+    lm_dt <- data.frame(S_proj = S %*% projection[,i], proj = projection[,i])
+    lm_tmp <- stats::lm(S_proj~0+proj, data = lm_dt)
+    e_val[i] <- unname(stats::coef(lm_tmp))
+  }
+  result <- list()
+  result$scores <- (x%*%projection)
+  result$projection <- projection
+  result$e_values <- e_val
+  result$sig <- sigma
+  result$mle.W <- W
+  result$varnames <- colnames(x)
+  return( result )
+}
