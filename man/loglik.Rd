@@ -7,13 +7,13 @@
 loglik(L, sigma, N, d, g)
 }
 \arguments{
-\item{L}{vector with length equal to the number of retained dimensions (d).}
+\item{L}{vector with length equal to the number of retained dimensions.}
 
 \item{sigma}{variance. This is the average variance lost per discarded dimension.}
 
 \item{N}{sample size. Number of observations.}
 
-\item{d}{integer. Number of retained dimensions.}
+\item{d}{integer. Number of dimensions in the data.}
 
 \item{g}{eigenvalues of the covariance matrix.}
 }
@@ -21,17 +21,18 @@ loglik(L, sigma, N, d, g)
 returns the -1 * log-likelihood of the data.
 }
 \description{
-Likelihood function for the standard probabilistic PCA or the phylogenetic probabilistic PCA. Please note that this function returns -1 * log-likelihood! Also note that one just need to change between the covariance of the data and the R matrix (multivariate Brownian Motion covariance matrix). The likelihood function only uses the eigenvalues of the covariance matrix (see parameter g).
+Likelihood function for the standard probabilistic PCA or the phylogenetic probabilistic PCA. Note that one just need to change between the covariance of the data and the R matrix (multivariate Brownian Motion covariance matrix). The likelihood function only uses the eigenvalues of the covariance matrix (see parameter g).
 }
 \examples{
+\donttest{
 phy <- ratematrix::anoles$phy[[1]]
 dt <- as.matrix( ratematrix::anoles$data[,1:3] )
 L_start <- rgamma(n = 2, shape = 2, rate = 1)
 sigma_start <- rgamma(n = 1, shape = 2, rate = 1)
 R <- do3PCA:::fastR(x = dt, phy = phy)
 g <- eigen(R)$values
--1 * loglik(L = L_start, sigma = sigma_start, N = nrow(dt), d = 2, g = g)
-
+loglik(L = L_start, sigma = sigma_start, N = nrow(dt), d = 2, g = g)
+}
 
 }
 \references{

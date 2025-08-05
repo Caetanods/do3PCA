@@ -1,0 +1,128 @@
+---
+title: "do3PCA tutorial"
+author: "Daniel S. Caetano"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{do3PCA tutorial}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(cache = TRUE)
+set.seed(1638)
+```
+
+## Probabilistic PCA using do3PCA
+
+The **do3PCA** package is able to do standard (non-phylogenetic) probabilistic PCA, probabilistic phylogenetic PCA (3PCA), and probabilistic PCA of phylogenetic independent contrasts (PIC-PCA). Here we generate a dataset using simulation tools and show how to perform probabilistic PCA analyses, interpret the results, and create plots.
+
+```{r message=FALSE}
+library( do3PCA )
+```
+
+## Non-phylogenetic PCA
+
+We will perform regular PCA and probabilistic PCA and compare the results using the `iris` data. First the regular PCA:
+
+```{r}
+data(iris)
+iris_mat <- iris[,1:4]
+pca <- prcomp(iris_mat)
+# Use the Broken Stick function to select the number of principal components to retain:
+BrokenStick(n_dim = 4, var_vec = pca$sdev)
+# The result is a single dimension.
+```
+
+Now let's repeat the analysis with probabilistic PCA. The difference is that we need to set the number of dimensions to keep because it is part of the model. So here we will perform model selection using a probabilistic approach as implemented in the `modelChoice` function.
+
+```{r}
+best <- modelChoice(x = iris_mat)
+# The best model:
+best$`best # PCs`
+# The distribution of log_likelihood:
+best$`log(p(D|k)`
+```
+
+Note that the likelihood method selected 3 principal components to keep whereas the Broken Stick selected only a single PC. This is not an error! These two approaches are both valid, but they try to do different things. Let's see what the Broken Stick method return when we use the probabilistic PCA. For that we need to estimate the model with the largest number of PCs, which is the total number of dimensions of the data -1. For that we will use the function `ProbPCA` that does non-phylogenetic probabilistic PCA:
+
+```{r}
+full_model <- ProbPCA(x = as.matrix(iris_mat), ret_dim = 3)
+BrokenStick(n_dim = 3, var_vec = full_model$percent_var_pcs)
+```
+
+We find that the Broken Stick approach also recommends a single principal component with the results of the probabilistic PCA.
+
+Now let's plot the results of the probabilistic PCA using a biPlot:
+
+```{r}
+doBiplot(x = full_model)
+```
+
+The data and labels can be non-optimal, so we can adjust things. We can also change the colors of the plot elements:
+
+```{r}
+doBiplot(x = full_model, xlim = c(-0.3, 0.3), ylim = c(-0.3, 0.3), col = c("lightblue", "darkgreen", "pink"))
+```
+
+## 3PCA: probabilistic phylogenetic PCA
+
+Here we will use data from the `ratematrix` package to perform a quick phylogenetic PCA. The steps are very similar to the one we did with regular PCA. Here we will also compare the scores of the `do3PCA` package with the results using `phytools` and the non-probabilistic phylogenetic PCA.
+
+```{r}
+library( ratematrix )
+data("anoles")
+anole_dt <- anoles$data[,1:3]
+anole_phy <- mergeSimmap(anoles$phy[[1]], drop.regimes = TRUE)
+```
+
+First let's do a standard phylogenetic PCA:
+
+```{r}
+library( phytools )
+phypca <- phyl.pca(tree = anole_phy, Y = anole_dt)
+# Check the best number of PCs using the Broken Stick function:
+BrokenStick(n_dim = 3, var_vec = diag(phypca$Eval))
+# Again only a single dimension.
+# We can plot the scores of the PCA using the do3PCA plotting function:
+doBiplot(x = phypca)
+```
+
+Now let's repeat this analysis using the 3PCA approach and the `phylProbPCA` function. We will set the option `scale = FALSE` because `phytools` does not scale the data prior to conducting a PCA and `do3PCA` package does.
+
+```{r, error=TRUE}
+pca3 <- phylProbPCA(phy = anole_phy, x = anole_dt, scale = FALSE, ret_dim = 2)
+```
+
+Oh! We got an error! That is because the `x` parameter for the `do3PCA` package needs to be a matrix type object. Let's use `as.matrix` to fix this:
+
+```{r}
+pca3 <- phylProbPCA(phy = anole_phy, x = as.matrix(anole_dt), scale = FALSE, ret_dim = 2)
+doBiplot(x = pca3)
+```
+
+The results are nearly identical! 
+
+However, note that PCA rotates the data to fit the principal axes. The direction of this rotation (e.g., if to the right or left of PC1) is arbitrary and can change depending on the implementation. Do some research about `princomp` and `prcomp` functions and you will learn that they can return inverted PC axes. Both are correct results.
+
+Here we show that the scores are very similar:
+
+```{r, fig.keep='last'}
+head( pca3$scores)
+## Plot the 3PCA scores with x axis inverted
+plot(x = pca3$scores[,1], y = pca3$scores[,2])
+## Add the phytools pPCA as red + symbols
+points(x = phypca$S[,1], y = phypca$S[,2], pch = 3, col = "red")
+```
+
+## PIC-PCA: Probabilistic PCA of independent contrasts
+
+Doing a PIC-PCA is very similar to a 3PCA. We just need to use the function `picProbPCA` intead of the `phylProbPCA` function. The input objects and options are the same.
+
+```{r}
+pic_pca <- picProbPCA(phy = anole_phy, x = as.matrix(anole_dt), scale = FALSE, ret_dim = 2)
+doBiplot(x = pic_pca)
+```
+

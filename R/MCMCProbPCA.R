@@ -3,6 +3,7 @@
 #' @description Function to perform probabilistic PCA using Bayesian Markov-Chain Monte Carlo.
 #' @param x a matrix with traits in columns and species values in rows.
 #' @param ret_dim number of dimensions (PC axes) to be kept by the model.
+#' @param scale if data should be rescaled to have zero mean and unit variance using the function scale(). Default is TRUE.
 #' @param gamma_shape The shape parameter for the gamma prior.
 #' @param gamma_rate The rate parameter for the gamma prior.
 #' @param gen The number generations for the MCMC.
@@ -25,9 +26,14 @@
 #'
 #'
 #' @export
-MCMCProbPCA <- function(x, ret_dim = 2, scale_data = TRUE, gamma_shape = 1, gamma_rate = 2, gen = 10^6, step_scale = 0.08, burn = 0.2){
+MCMCProbPCA <- function(x, ret_dim = 2, scale = TRUE, gamma_shape = 1, gamma_rate = 2, gen = 10^6, step_scale = 0.08, burn = 0.2){
+
+  if( !inherits(x = x, what = "matrix") ){
+    stop("x needs to be a matrix. Cannot be a data.frame.")
+  }
+
   ## Standardized data:
-  if( scale_data ) x <- scale(x = x)
+  if( scale ) x <- scale(x = x)
 
   ## Preparing parameters:
   d <- ncol(x)
@@ -45,16 +51,16 @@ MCMCProbPCA <- function(x, ret_dim = 2, scale_data = TRUE, gamma_shape = 1, gamm
   post_factory <- function(N, d, g, shape, rate) function(par){
     sigma <- exp(par[length(par)])
     L <- exp(par[1:(length(par)-1)])
-    loglikeval <- do3PCA:::loglik(L = L, sigma = sigma, N = N, d = d, g = g)
+    loglikeval <- loglik(L = L, sigma = sigma, N = N, d = d, g = g)
     prioreval <- sum(dgamma(x = c(L, sigma), shape = gamma_shape
                             , rate = gamma_rate, log = TRUE))
     if( is.na(loglikeval) ){
       print( paste0("NA : ", par ) )
-      loglikeval <- Inf
+      loglikeval <- -Inf
     }
     if( is.infinite(loglikeval) ){
       print( paste0("Inf : ", par ) )
-      loglikeval <- Inf
+      loglikeval <- -Inf
     }
     return( loglikeval + prioreval)
   }
@@ -105,7 +111,7 @@ MCMCProbPCA <- function(x, ret_dim = 2, scale_data = TRUE, gamma_shape = 1, gamm
   ## Add colnames:
   colnames(mean_scores) <- paste0("PC_", 1:ret_dim)
 
-  ## Output of the function:
+  ## Need to create class for the output object!
   out <- list(mean_scores = mean_scores, percent_var_pcs = mcmc_pc_var
               , var_loadings = mcmc_loadings, mcmc = mcmc1, stats = mcmc_proj)
   return( out )
