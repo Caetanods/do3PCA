@@ -4,28 +4,27 @@
 \alias{ProbPCA}
 \title{Probabilistic PCA}
 \usage{
-ProbPCA(x, ret_dim = 2)
+ProbPCA(x, ret_dim = 2, scale = TRUE)
 }
 \arguments{
 \item{x}{a matrix with traits in columns and observations in rows.}
 
 \item{ret_dim}{number of dimensions (PC axes) to be kept by the model.}
+
+\item{scale}{if data should be rescaled to have zero mean and unit variance using the function scale(). Default is TRUE.}
 }
 \value{
-returns a list of class "phylPPCA". See "Details" for more information.
+returns a list.
 }
 \description{
-Function to perform (non-phylogenetic) probabilistic PCA. This function is a modification (fork) of Rdimtools::do.ppca .
+Function to perform (non-phylogenetic) probabilistic PCA.
 }
 \details{
-This function uses the same algorithm as Rdimtools::do.ppca. However, it returns more details from the estimation and computes AIC and AICc.
-
-The function returns a list with the following elements. scores: the scores of the principal components; projection: the eigenvectors; sig: the MLE of the error of the model; mle.W: the MLE of the W matrix: varnames: the names of the traits; loglik: the log-likelihood of the estimate. Function also returns AIC, AICc, and BIC for the model.
+Optimization is performed using nloptr.
 }
 \examples{
 dt <- as.matrix( ratematrix::anoles$data[,1:3] )
 ppca <- ProbPCA(x = dt, ret_dim = 2)
-doBiplot(x = ppca, add_margin = 0.3)
 
 }
 \references{

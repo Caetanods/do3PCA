@@ -7,7 +7,7 @@
 MCMCProbPCA(
   x,
   ret_dim = 2,
-  scale_data = TRUE,
+  scale = TRUE,
   gamma_shape = 1,
   gamma_rate = 2,
   gen = 10^6,
@@ -19,6 +19,8 @@ MCMCProbPCA(
 \item{x}{a matrix with traits in columns and species values in rows.}
 
 \item{ret_dim}{number of dimensions (PC axes) to be kept by the model.}
+
+\item{scale}{if data should be rescaled to have zero mean and unit variance using the function scale(). Default is TRUE.}
 
 \item{gamma_shape}{The shape parameter for the gamma prior.}
 

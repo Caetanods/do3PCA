@@ -1,6 +1,6 @@
 Package: do3PCA
 Title: Probabilistic Phylogenetic Principal Component Analysis
-Version: 1.0.1
+Version: 1.0.2
 Authors@R: 
     person("Daniel", "Caetano", , "caetanods1@gmail.com", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-2803-4064"))
@@ -19,5 +19,11 @@ Imports:
     nloptr,
     ratematrix,
     stats,
-    utils
+    utils,
+    mcmc,
+    Matrix
 RoxygenNote: 7.3.2
+Suggests: 
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr

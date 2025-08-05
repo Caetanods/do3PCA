@@ -8,11 +8,14 @@ MCMCphylProbPCA(
   phy,
   x,
   ret_dim = 2,
+  scale = TRUE,
+  fixed_R = NULL,
   gamma_shape = 1,
   gamma_rate = 2,
   gen = 10^6,
   step_scale = 0.08,
-  burn = 0.2
+  burn = 0.2,
+  post_score_samples = 100
 )
 }
 \arguments{
@@ -21,6 +24,10 @@ MCMCphylProbPCA(
 \item{x}{a matrix with traits in columns and species values in rows. Rownames must match the tip labels of phylogeny.}
 
 \item{ret_dim}{number of dimensions (PC axes) to be kept by the model.}
+
+\item{scale}{if data should be rescaled to have zero mean and unit variance using the function scale(). Default is TRUE.}
+
+\item{fixed_R}{an evolutionary rate matrix to be used for the computation.}
 
 \item{gamma_shape}{The shape parameter for the gamma prior.}
 
@@ -31,6 +38,8 @@ MCMCphylProbPCA(
 \item{step_scale}{The scaler for the mulplier proposal of the MCMC.}
 
 \item{burn}{The proportion of the burn-in to the excluded before computing the average posterior parameter value.}
+
+\item{post_score_samples}{The number of posterior samples used to compute the posterior of scores.}
 }
 \value{
 returns a list with "mean_scores", "percent_var_pcs", "var_loadings", and "stats". Also return "mcmc" which is the output from the "mcmc" R package.
@@ -42,11 +51,12 @@ Function to perform probabilistic phylogenetic PCA using Bayesian Markov-Chain M
 This function uses the "mcmc" R package to conduct a Metropolis-Hastings search. The output "mcmc" can be used for further analyses of the MCMC chain using the "mcmc" package.
 }
 \examples{
+\donttest{
 phy <- ratematrix::anoles$phy[[1]]
 dt <- as.matrix( ratematrix::anoles$data[,1:3] )
 ## Do a VERY small chain to test:
-mcmc3PCA <- MCMCphylProbPCA(phy = phy, x = dt, gen = 100)
-
+mcmc3PCA <- MCMCphylProbPCA(phy = phy, x = dt, gen = 500)
+}
 
 }
 \references{

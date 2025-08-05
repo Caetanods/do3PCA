@@ -1,6 +1,6 @@
-#' @title Probabilistic Phylogenetic PCA
+#' @title Probabilistic PCA of independent contrasts (PIC-PCA)
 #'
-#' @description Function to perform probabilistic phylogenetic PCA. Allows for fit of alternative models of trait evolution using branch length transformation.
+#' @description Function to perform probabilistic PCA of independent contrasts. Allows for fit of alternative models of trait evolution using branch length transformation.
 #' @param phy phylogeny in "phylo" format.
 #' @param x a matrix with traits in columns and species values in rows. Rownames must match the tip labels of phylogeny.
 #' @param ret_dim number of dimensions (PC axes) to be kept by the model.
@@ -9,13 +9,14 @@
 #' @param quiet if function should suppress output to the console while running
 #' @returns returns a list of class "phylPPCA". See "Details" for more information.
 #' @details
-#' The function can be used to estimate the probabilistic phylogenetic PCA (3PCA) using distinct models of trait evolution. Models are implemented using branch length transformation. Model fitting happens in two steps. First the maximum likelihood of the evolutionary covariance matrix (R) and the parameter of the model is estimated. Then the 3PCA model is estimated using the phylogenetic tree with branch lengths transformed following the MLE for the parameter of each trait evolution model.
+#' The function can be used to estimate PIC-PCA using distinct models of trait evolution. Models are implemented using branch length transformation. Model fitting happens in two steps. First the maximum likelihood of the evolutionary covariance matrix (R) and the parameter of the model is estimated. Then the PIC-PCA model is estimated using the phylogenetic tree with branch lengths transformed following the MLE for the parameter of each trait evolution model.
 #'
 #' The function returns a list with the following elements. scores: the scores of the principal components; e_values: eigenvalues; e_vectors: eigenvectors or the projection; model_fit: information about the trait evolution model; loadings: the loadings of the PCs; varnames: the names of the variables; sig: the MLE of the error; mle.W: the MLE of the W matrix; Function also returns AIC, AICc, and BIC for the model.
 #' @references Revell, L. J. 2009. Size-Correction and Principal Components for Interspecific Comparative Studies. Evolution 63:3258–3268. doi: 10.1111/j.1558-5646.2009.00804.x
 #' @references Revell, L. J. 2024. phytools 2.0: an updated R ecosystem for phylogenetic comparative methods (and other things). PeerJ 12:e16505. doi: 10.7717/peerj.16505
+#' @references Garland Jr, T., Harvey, P.H. and Ives, A.R., 1992. Procedures for the analysis of comparative data using phylogenetically independent contrasts. Systematic biology, 41(1), pp.18-32.
 #' @references Tipping, M. E., and C. M. Bishop. 1999. Probabilistic Principal Component Analysis. Journal of the Royal Statistical Society Series B: Statistical Methodology 61(3):611–622. doi: 10.1111/1467-9868.00196
-#' @importFrom ape vcv.phylo
+#' @importFrom ape vcv.phylo pic
 #' @importFrom phytools rescale phyl.vcv
 #' @importFrom matrixcalc is.singular.matrix
 #' @importFrom ratematrix likelihoodFunction
@@ -24,11 +25,12 @@
 #' @examples
 #' phy <- ratematrix::anoles$phy[[1]]
 #' dt <- as.matrix( ratematrix::anoles$data[,1:3] )
-#' ppca <- phylProbPCA(phy = phy, x = dt, ret_dim = 2)
+#' ppca <- picProbPCA(phy = phy, x = dt, ret_dim = 2)
 #' doBiplot(x = ppca, add_margin = 0.3)
 #'
 #' @export
-phylProbPCA <- function(phy, x, ret_dim = 2, model = "BM", scale = TRUE, quiet = FALSE){
+picProbPCA <- function(phy, x, ret_dim = 2, model = "BM", scale = TRUE, quiet = FALSE){
+
   ## Check if x is a matrix object.
   if( !inherits(x = x, what = "matrix") ){
     stop("x needs to be a matrix. Cannot be a data.frame.")
@@ -58,13 +60,7 @@ phylProbPCA <- function(phy, x, ret_dim = 2, model = "BM", scale = TRUE, quiet =
   ## Transform branch lengths according to the model:
   if( model == "BM" ){
     ## The standard implementation.
-    C <- ape::vcv.phylo(phy)
-    invC <- solve(C)
-    a <- matrix(colSums(invC %*% x) / sum(invC), ncol(x), 1)
-    A <- matrix(rep(a, nrow(x)), nrow(x), ncol(x), byrow=T)
-    R <- t(x-A) %*% invC %*% (x-A) / (nrow(C)-1)
-    muhat <- c(a)
-    fit_model_solution <- list(model = "BM")
+    pic <- apply(X = x, MARGIN = 2, FUN = pic, phy = phy)
   }
   if( model == "lambda" ){
     ## Prepare estimation function for lambda
@@ -102,12 +98,8 @@ phylProbPCA <- function(phy, x, ret_dim = 2, model = "BM", scale = TRUE, quiet =
                                , loglik = -1*fit_l$objective)
     ## Use the MLE of the lambda to compute the probabilistic PCA model.
     phy_lambda <- phy_lambda_fn(lambda = fit_model_solution[[2]])
-    C <- ape::vcv.phylo(phy_lambda)
-    invC <- solve(C)
-    a <- matrix(colSums(invC %*% x) / sum(invC), ncol(x), 1)
-    A <- matrix(rep(a, nrow(x)), nrow(x), ncol(x), byrow=T)
-    R <- t(x-A) %*% invC %*% (x-A) / (nrow(C)-1)
-    muhat <- c(a)
+    ## Compute the pics with the rescaled tree:
+    pic <- apply(X = x, MARGIN = 2, FUN = pic, phy = phy_lambda)
   }
   if( model == "OU" ){
     ## Prepare estimation function for OU
@@ -139,12 +131,8 @@ phylProbPCA <- function(phy, x, ret_dim = 2, model = "BM", scale = TRUE, quiet =
 
     ## Use the MLE of the lambda to compute the probabilistic PCA model.
     phy_ou <- phy_ou_fn(alpha = fit_model_solution[[2]])
-    C <- ape::vcv.phylo(phy_ou)
-    invC <- solve(C)
-    a <- matrix(colSums(invC %*% x) / sum(invC), ncol(x), 1)
-    A <- matrix(rep(a, nrow(x)), nrow(x), ncol(x), byrow=T)
-    R <- t(x-A) %*% invC %*% (x-A) / (nrow(C)-1)
-    muhat <- c(a)
+    ## Compute the pics with the rescaled tree:
+    pic <- apply(X = x, MARGIN = 2, FUN = pic, phy = phy_ou)
   }
   if( model == "EB" ){
     phy_eb_fn <- phytools::rescale(x = phy, model = "EB")
@@ -175,84 +163,11 @@ phylProbPCA <- function(phy, x, ret_dim = 2, model = "BM", scale = TRUE, quiet =
 
     ## Use the MLE of the lambda to compute the probabilistic PCA model.
     phy_eb <- phy_eb_fn(a = fit_model_solution[[2]])
-    C <- ape::vcv.phylo(phy_eb)
-    invC <- solve(C)
-    a <- matrix(colSums(invC %*% x) / sum(invC), ncol(x), 1)
-    A <- matrix(rep(a, nrow(x)), nrow(x), ncol(x), byrow=T)
-    R <- t(x-A) %*% invC %*% (x-A) / (nrow(C)-1)
-    muhat <- c(a)
+    ## Compute the pics with the rescaled tree:
+    pic <- apply(X = x, MARGIN = 2, FUN = pic, phy = phy_eb)
   }
 
-  ## Adding BM parameters to the model output:
-  fit_model_solution$R <- R
-  fit_model_solution$muhat <- muhat
-
-  ## Find the MLE of the PPCA model
-  R_decom <- eigen(R)
-  g <- R_decom$values
-  ## Likelihood function in log parameter space:
-  log_space <- function(pars, N, d, g){
-    ll <- loglik(L = exp(pars[1:q]), sigma = exp(pars[q+1])
-                 , N = N, d = d, g = g)
-    if( is.infinite(ll) ) ll <- -Inf
-    return( -1 * ll ) ## NLOPTR is minimizing!
-  }
-  ## Starting point for the optimization:
-  pars <- log( rgamma(n = q+1, shape = 1, rate = 2) )
-  ## Check starting point:
-  start_p_lik <- log_space(pars = pars, N = N, d = d, g = g)
-  if( is.infinite( start_p_lik ) ) stop("Starting point MLE is infinite!")
-  if( is.na( start_p_lik ) ) stop("Starting point MLE is NA!")
-  ## Optimize using nlopt:
-  mle <- nloptr::nloptr(x0 = pars, eval_f = log_space
-                        , opts = list(algorithm = "NLOPT_LN_SBPLX"
-                                      , xtol_rel = 1e-8
-                                      , maxeval = 1e6)
-                        , N = N, d = d, g = g)
-  ## MLE solution:
-  L_mle <- exp(mle$solution[1:q])
-  sigma_mle <- exp(mle$solution[q+1])
-  best_lik <- -1 * mle$objective
-  ## Reconstruction of W matrix from L vector:
-  ## With the W matrix and sigma we can get the principal components.
-  L_q <- diag(x = L_mle)
-  U_q <- R_decom$vectors[,1:q]
-  I_q <- diag(nrow = q, ncol = q)
-  W <- U_q %*% (L_q - (sigma_mle^2*I_q))^0.5 %*% I_q
-  ## Compute the projection:
-  mle_proj <- getPhyloProjection(x = x, invC = invC, R = R, R_decom = R_decom
-                                 , W = W, a = a, N = N, d = d, q = q
-                                 , sigma = sigma_mle)
-  ## Compute the percent explained variance of the axes:
-  mle_pc_var <- mle_proj$e_values / sum(mle_proj$e_values) * 100
-  ## Compute the loadings:
-  mle_loadings <- mle_proj$projection^2 * 100
-  rownames(mle_loadings) <- mle_proj$varnames
-  colnames(mle_loadings) <- paste0("loadings_PC", 1:ret_dim)
-
-  ## Add to the projection list to return as stats:
-  scores <- mle_proj$scores
-  mle_proj$scores <- NULL ## Avoid duplicated information!
-  mle_proj$mle.L <- L_mle
-  mle_proj$loglik <- best_lik
-
-  ## Number of parameters depend on model:
-  if( model == "BM" ){
-    params <- (d*q) - (0.5*q*(q-1)) + 1
-  } else{
-    ## One extra parameter for all other models.
-    params <- (d*q) - (0.5*q*(q-1)) + 2
-  }
-  mle_proj$npar <- params
-  mle_proj$AIC <- (-2*best_lik) + (2*params)
-  mle_proj$AICc <- (-2*best_lik) + (2*params*(N/(N-params-1)))
-  mle_proj$BIC <- (-2*best_lik) + (params*log(N))
-
-  ## Save the MLE parameters:
-  # par_list <- list(R = mlW%*%t(mlW)+mlsig2*diag(d), root = muhat, npar = params)
-
-  ## Need to create class for the output object!
-  out_obj <- list(scores = scores, percent_var_pcs = mle_pc_var, var_loadings = mle_loadings, log_lik = mle_proj$loglik, AICc = mle_proj$AICc, nlopt = mle, stats = mle_proj, e_values = mle_proj$e_values, e_vectors = mle_proj$projection, varnames = colnames(x))
-  class( out_obj ) <- append(x = class( out_obj), values = "phylPPCA")
-  return( out_obj )
+  ## Now conduct probabilistic PCA with the independent contrasts:
+  return( ProbPCA(x = pic, ret_dim = ret_dim, scale = scale) )
 }
+

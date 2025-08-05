@@ -45,9 +45,10 @@ binary_search <- function(fn, lb, ub, chunk = 0.00001, max_reps = 100000){
 
 #' @noRd
 #' @importFrom ape vcv.phylo
+#' @importFrom Matrix solve
 fastR <- function(x, phy){
   C <- ape::vcv.phylo(phy)
-  invC <- solve(C)
+  invC <- Matrix::solve(C, sparse = TRUE)
   a <- matrix(colSums(invC %*% x) / sum(invC), ncol(x), 1)
   A <- matrix(rep(a, nrow(x)), nrow(x), ncol(x), byrow=T)
   R <- t(x-A) %*% invC %*% (x-A) / (nrow(C)-1)
@@ -63,13 +64,14 @@ getPhyloProjection <- function(x, invC, R, R_decom, W, a, N, sigma, d, q, square
   # a = the phylogenetic mean.
   # sigma = can be squared or not
   # squared = indicate if sigma is squared or not
+
   if( !squared ){
     sigma <- sigma^2
   }
   ## Following the projection computed in do3PCA::phylProbPCA.
   M <- (t(W)%*%W)+(diag(ncol(W))*sigma)
-  SOL <- do3PCA:::aux.bicgstab_fork(M, t(W), verbose=FALSE)
-  projection <- do3PCA:::aux.adjprojection_fork(t(SOL$x))
+  SOL <- aux.bicgstab_fork(M, t(W), verbose=FALSE)
+  projection <- aux.adjprojection_fork(t(SOL$x))
   Xc <- sweep(x, 2, a, "-")
   scores <- t( t(projection) %*% t(Xc) )
 
@@ -95,7 +97,7 @@ getPhyloProjection <- function(x, invC, R, R_decom, W, a, N, sigma, d, q, square
   }
 
   result <- list()
-  result$scores <- (x%*%projection)
+  result$scores <- scores
   result$e_values <- e_val
   result$projection <- projection
   result$sig <- sigma
@@ -115,8 +117,8 @@ getProjection <- function(x, W, S, sigma, squared = FALSE){
     sigma <- sigma^2
   }
   M <- (t(W)%*%W)+(diag(ncol(W))*sigma)
-  SOL <- do3PCA:::aux.bicgstab_fork(M, t(W), verbose=FALSE)
-  projection <- do3PCA:::aux.adjprojection_fork(t(SOL$x))
+  SOL <- aux.bicgstab_fork(M, t(W), verbose=FALSE)
+  projection <- aux.adjprojection_fork(t(SOL$x))
   ## Find the eigenvalues given W:
   e_val <- vector(mode = "numeric", length = ncol(projection))
   for( i in 1:length(e_val) ){

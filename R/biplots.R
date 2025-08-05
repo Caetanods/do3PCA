@@ -187,7 +187,7 @@ biplot_prcomp <- function(x, choices = 1L:2L, scale = 1, pc.biplot=FALSE, col, .
 biplot_ppca <- function(x, choices = 1L:2L, scale = 1, pc.biplot = FALSE, col, ...)
 {
   if(length(choices) != 2L) stop("length of choices must be 2")
-  if(!length(scores <- x$scores))
+  if(!length(scores <- x$mle_scores))
     stop(gettextf("object '%s' has no scores", deparse(substitute(x))),
          domain = NA)
   ## Problem in the next line. The scores can be a list! Only matrix if there is a single group.
@@ -209,15 +209,15 @@ biplot_ppca <- function(x, choices = 1L:2L, scale = 1, pc.biplot = FALSE, col, .
     warning( "unmatched ncol of scores")
     x_plot <- t(t(scores) / lam_matrix)
   }
-  n_var <- nrow(x$projection)
+  n_var <- nrow(x$stats$projection)
   lam_matrix <- matrix(lam, nrow = n_var, ncol = length(lam), byrow = TRUE)
-  loadings_mat <- x$projection
+  loadings_mat <- x$stats$projection
   if( ncol(loadings_mat) == ncol(lam_matrix) ){
     y_plot <- loadings_mat * lam_matrix
   } else{
     y_plot <- t(t(loadings_mat) * lam_matrix)
   }
-  rownames(y_plot) <- x$varnames
+  rownames(y_plot) <- x$stats$varnames
   biplot_default(x_plot, y_plot, col = col, ...)
   invisible()
 }
