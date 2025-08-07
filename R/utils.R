@@ -1,3 +1,4 @@
+## Test
 ## Dependency of some unexported functions from Rdimtools:
 
 #' @noRd
