@@ -28,7 +28,7 @@ ProbPCA <- function(x, ret_dim = 2, scale = TRUE){
     x <- scale(x)
   }
 
-  if ((!is.numeric(ret_dim))||(ret_dim<1)||(ret_dim>=ncol(x))||is.infinite(ret_dim)||is.na(ret_dim)){
+  if ((!is.numeric(ret_dim))||(ret_dim<2)||(ret_dim>=ncol(x))||is.infinite(ret_dim)||is.na(ret_dim)){
     d <- ncol(x)
     stop( paste0("'ret_dim' must be a positive integer between 2 and ", d-1, ".", collapse = "") )
   }
